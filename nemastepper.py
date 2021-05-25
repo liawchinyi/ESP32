@@ -1,4 +1,4 @@
-import machine
+
 from machine import Pin
 
 class Stepper():
@@ -59,5 +59,6 @@ class Stepper():
         
             
     
+
 
 
