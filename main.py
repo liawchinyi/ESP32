@@ -16,7 +16,7 @@ try:
 except:
   import socket
 
-led = machine.Pin(2, machine.Pin.OUT)
+led = machine.Pin(19, machine.Pin.OUT)
 
 wlan = wifimgr.get_connection()
 if wlan is None:
@@ -25,7 +25,7 @@ if wlan is None:
         pass  # you shall not pass :D
 
 # Main Code goes here, wlan is a working network.WLAN(STA_IF) instance.
-print("ESP OK")
+print("ESP32 OK")
 
 def web_page():
   if led.value() == 1:
@@ -53,16 +53,73 @@ except OSError as e:
 # set up stepper motors
 
 from nemastepper import Stepper
-from nemastepper import Stepper
+
 motor1 = Stepper(26,25,12)
 motor2 = Stepper(33,32,14)
-led=Pin(19,Pin.OUT)        #create LED object from pin2,Set Pin2 to output
-def step_cb(t):
-    motor1.do_step()
-    motor2.do_step()
-    
+
+def TaskOne():
+    while True:
+        # do work
+        # relinquish control
+        print ('Task One!')
+        yield None
+
+def TaskTwo():
+    while True:
+        print ('Task Two!')
+        yield None
+        
+def Tas_LED():
+    while True:
+        led.value(1)            #Set led turn on
+        time.sleep(0.1)
+        led.value(0)            #Set led turn off
+        time.sleep(0.1)
+        yield None
+        
+def step_cb():
+    while True:
+      motor1.do_step()
+      motor2.do_step()
+      yield None
+      
+def lan():
+    while True:
+      try:
+        if gc.mem_free() < 102000:
+          gc.collect()
+        conn, addr = s.accept()
+        conn.settimeout(3.0)
+        print('Got a connection from %s' % str(addr))
+        request = conn.recv(1024)
+        conn.settimeout(None)
+        request = str(request)
+        print('Content = %s' % request)
+        led_on = request.find('/?led=on')
+        led_off = request.find('/?led=off')
+        if led_on == 6:
+          print('LED ON')
+          led.value(1)
+        if led_off == 6:
+          print('LED OFF')
+          led.value(0)
+        response = web_page()
+        conn.send('HTTP/1.1 200 OK\n')
+        conn.send('Content-Type: text/html\n')
+        conn.send('Connection: close\n\n')
+        conn.sendall(response)
+        conn.close()
+      except OSError as e:
+        conn.close()
+        print('Connection closed')
+      yield None
+  
+TaskQueue = [ TaskOne(), TaskTwo(), Tas_LED(), lan() ]
+
 timer=Timer(8)
-timer.init(freq=20000, mode=Timer.PERIODIC, callback=step_cb)   #initializing the timer
+timer.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb)   #initializing the timer
+#timer2=Timer(4)
+#timer2.init(freq=1, mode=Timer.PERIODIC, callback=lan)   #initializing the timer
 
 motor1.MAX_ACCEL = 1000  
 motor2.MAX_ACCEL = 1000  
@@ -71,45 +128,18 @@ motor1.set_speed(speed)
 motor2.set_speed(speed)
 print ('press button to stop')
 
-while 1 :
-  led.value(1)            #Set led turn on
-  time.sleep(0.1)
-  led.value(0)            #Set led turn off
-  time.sleep(0.1)
+while True :
   
-  try:
-    if gc.mem_free() < 102000:
-      gc.collect()
-    conn, addr = s.accept()
-    conn.settimeout(3.0)
-    print('Got a connection from %s' % str(addr))
-    request = conn.recv(1024)
-    conn.settimeout(None)
-    request = str(request)
-    print('Content = %s' % request)
-    led_on = request.find('/?led=on')
-    led_off = request.find('/?led=off')
-    if led_on == 6:
-      print('LED ON')
-      led.value(1)
-    if led_off == 6:
-      print('LED OFF')
-      led.value(0)
-    response = web_page()
-    conn.send('HTTP/1.1 200 OK\n')
-    conn.send('Content-Type: text/html\n')
-    conn.send('Connection: close\n\n')
-    conn.sendall(response)
-    conn.close()
-  except OSError as e:
-    conn.close()
-    print('Connection closed')
-    
+  for task in TaskQueue:
+    next(task)
+
 print ('end')
     
 motor1.set_speed(0)
 motor1.set_off()
-
+motor2.set_speed(0)
+motor2.set_off()
 timer.deinit()
+#timer2.deinit()
 
 
