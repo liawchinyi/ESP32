@@ -1,5 +1,6 @@
 # UPYBBOT - micropython balancing robot
-
+# C:\Python39\Lib\site-packages>esptool.py erase_flash
+# C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-idf3-20210202-v1.14.bin
 import machine 
 import time
 from time import ticks_us,ticks_cpu
@@ -8,7 +9,7 @@ from machine import Timer
 # set up stepper motors
 
 from nemastepper import Stepper
-from nemastepper import Stepper
+
 motor1 = Stepper(26,25,12)
 motor2 = Stepper(33,32,14)
 
@@ -19,6 +20,7 @@ def step_cb():
 #timer=Timer(8)
 #timer.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb)   #initializing the timer
 
+led = Pin(19, Pin.OUT)
 motor1.MAX_ACCEL = 1000  
 motor2.MAX_ACCEL = 1000  
 speed = 3000
@@ -27,12 +29,13 @@ motor2.set_speed(speed)
 print ('press button to stop')
 while 1 :
     motor1.do_step()
-    motor2.do_step()
+    motor2.do_step()    
+    led.value(not led.value())
+    time.sleep_ms(1000)
 print ('button pressed')
     
 motor1.set_speed(0)
 motor1.set_off()
-
+motor2.set_speed(0)
+motor2.set_off()
 #timer.deinit()
-
-
