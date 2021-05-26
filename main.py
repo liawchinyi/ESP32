@@ -33,7 +33,7 @@ def led_cb(self):
     led.value(not led.value())
 
 timer=Timer(5)
-timer.init(freq=1, mode=Timer.PERIODIC, callback=led_cb)   #initializing the timer
+timer.init(freq=3, mode=Timer.PERIODIC, callback=led_cb)   #initializing the timer
 
 timer2=Timer(8)
 timer2.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb)   #initializing the timer
@@ -76,36 +76,44 @@ try:
 except OSError as e:
   machine.reset()
 
+def update_socket(self):
+    while True:
+        try:
+            if gc.mem_free() < 102000:
+                gc.collect()
+            conn, addr = s.accept()
+            conn.settimeout(3.0)
+            print('Got a connection from %s' % str(addr))
+            request = conn.recv(1024)
+            conn.settimeout(None)
+            request = str(request)
+            print('Content = %s' % request)
+            led_on = request.find('/?led=on')
+            led_off = request.find('/?led=off')
+            if led_on == 6:
+                print('LED ON')
+                led.value(1)
+            if led_off == 6:
+                print('LED OFF')
+                led.value(0)
+            response = web_page()
+            conn.send('HTTP/1.1 200 OK\n')
+            conn.send('Content-Type: text/html\n')
+            conn.send('Connection: close\n\n')
+            conn.sendall(response)
+            conn.close()
+        except OSError as e:
+            conn.close()
+            print('Connection closed')
+
+#timer3=Timer(7)
+#timer3.init(freq=10, mode=Timer.PERIODIC, callback=update_socket)   #initializing the timer
+
 print ('start')
 
 while True:
-  try:
-    if gc.mem_free() < 102000:
-      gc.collect()
-    conn, addr = s.accept()
-    conn.settimeout(3.0)
-    print('Got a connection from %s' % str(addr))
-    request = conn.recv(1024)
-    conn.settimeout(None)
-    request = str(request)
-    print('Content = %s' % request)
-    led_on = request.find('/?led=on')
-    led_off = request.find('/?led=off')
-    if led_on == 6:
-      print('LED ON')
-      led.value(1)
-    if led_off == 6:
-      print('LED OFF')
-      led.value(0)
-    response = web_page()
-    conn.send('HTTP/1.1 200 OK\n')
-    conn.send('Content-Type: text/html\n')
-    conn.send('Connection: close\n\n')
-    conn.sendall(response)
-    conn.close()
-  except OSError as e:
-    conn.close()
-    print('Connection closed')
+    pass
+
 
 print ('exit')
     
@@ -115,3 +123,4 @@ motor2.set_speed(0)
 motor2.set_off()
 timer.deinit()
 timer2.deinit()
+#timer3.deinit()
