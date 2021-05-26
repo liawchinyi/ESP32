@@ -13,6 +13,7 @@ from nemastepper import Stepper
 
 motor1 = Stepper(26,25,12)
 motor2 = Stepper(33,32,14)
+led = Pin(19, Pin.OUT)
 
 def step_cb(self):
     motor1.do_step()
@@ -20,12 +21,14 @@ def step_cb(self):
 
 def led_cb(self):
     led.value(not led.value())
-    time.sleep_us(1)
 
-timer=Timer(8)
+timer=Timer(5)
 timer.init(freq=1, mode=Timer.PERIODIC, callback=led_cb)   #initializing the timer
 
-led = Pin(19, Pin.OUT)
+timer2=Timer(8)
+timer2.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb)   #initializing the timer
+
+
 motor1.MAX_ACCEL = 1000  
 motor2.MAX_ACCEL = 1000  
 speed = 3000
@@ -33,8 +36,7 @@ motor1.set_speed(speed)
 motor2.set_speed(speed)
 print ('press button to stop')
 while 1 :
-    motor1.do_step()
-    motor2.do_step()     
+    time.sleep_us(1)    
 
 print ('button pressed')
     
@@ -43,3 +45,4 @@ motor1.set_off()
 motor2.set_speed(0)
 motor2.set_off()
 timer.deinit()
+timer2.deinit()
