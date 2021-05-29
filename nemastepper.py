@@ -16,11 +16,10 @@ class Stepper():
         self.speed = 0
         self.MAX_ACCEL = 100   #equivallent to 100 x (periodicity of set_speed) usteps/sec/sec
  
-
     def do_step(self):   # called by timer interrupt every 100us
         if self.dir == 0:
             return
-        self.count = (self.count+1)%self.pulserate
+        self.count = (self.count+1)%(self.pulserate+1)
         if self.count == 0:
             self.step_pin.on()
             pass
@@ -45,7 +44,7 @@ class Stepper():
         else:
             self.dir = 0
         if abs(self.speed)>0:
-            self.pulserate = 10000//abs(self.speed)
+            self.pulserate = 10000//(abs(self.speed)+1)
 
     def set_off(self):
         self.enable_pin.on()
