@@ -48,7 +48,7 @@ class Stepper():
             self.pulserate = 10000//abs(self.speed)
 
     def set_off(self):
-        self.enable_pin.high()
+        self.enable_pin.on()
 
     def get_speed(self):
         return self.speed
