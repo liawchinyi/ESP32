@@ -25,11 +25,9 @@ BOOT_sw = Pin(0, Pin.IN, Pin.PULL_UP)#输入红外探头
 if BOOT_sw.value() == 0:
     sys.exit()
     
-import mpu6050
-i2c = I2C(scl = Pin(22), sda = Pin(21), freq = 100000)
-
+from mpu6050 import mpu6050
 #initializing the I2C method for ESP32
-imu= mpu6050.accel(i2c)
+imu = mpu6050(2,False)
 
 def step_cb(self):
     global motor1, motor2
@@ -48,7 +46,7 @@ timer.init(freq=2, mode=Timer.PERIODIC, callback=led_cb)
 #initializing the timer
 
 tim=Timer(6)
-#tim.init(freq=20000, mode=Timer.PERIODIC, callback=step_cb)   
+tim.init(freq=20000, mode=Timer.PERIODIC, callback=step_cb)   
 #initializing the timer
 
 motor1.MAX_ACCEL = 1000  
@@ -108,7 +106,7 @@ def balance():
         # speed control
         actualspeed = (motor1.get_speed()+motor2.get_speed())/2
         fspeed = 0.95 * fspeed + 0.05 * actualspeed
-        cmd = 0 #radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
+        cmd = [0.0, 0.0] #radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
         tangle = speedcontrol(800*cmd[1],fspeed)
          # stability control
         controlspeed += stability(tangle, gangle, rate)           
@@ -127,11 +125,11 @@ array = imu.get_values()
 print(array)
 print ('start')
 count = 0
-while count < 5000 and limit_sw.value() == 1:
+while count < 5000 and BOOT_sw.value() == 1:
     count = count + 1
     array = imu.get_values()
     speed = array["GyY"]+array["AcX"]
-    tim.init(freq=20000, mode=Timer.PERIODIC, callback=step_cb) #start interrupt routine
+    tim.init(callback=step_cb) #start interrupt routine
     balance()
     tim.init(callback=None)
     #print(count, speed, array)

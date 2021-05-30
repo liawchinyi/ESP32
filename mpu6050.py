@@ -2,6 +2,7 @@ import machine
 import os
 from struct import unpack as unp
 from math import atan2,degrees,pi
+from machine import I2C, Pin, Timer, sleep
 '''
 def ar(i):
     switcher={
@@ -12,7 +13,7 @@ def ar(i):
             }
     return switcher.get(i,"Invalid")
 '''
-class accel():
+class mpu6050():
     '''
     Module for the MPY6050 6DOF IMU. 
     By default interrupts are disabled while reading or writing to the device. This
@@ -22,13 +23,19 @@ class accel():
     mpu_addr = 0x68  # address of MPU6050
     _I2Cerror = "I2C communication failure"
 
-    def __init__(self, i2c, addr=0x68, disable_interrupts=False):
-        self.iic = i2c
-        self.iic.scan()
+    def __init__(self, side=1, disable_interrupts=False):
+        addr=0x68
+        # create i2c object
+        self._timeout = 10
+        self.disable_interrupts = False
+        self.i2c = I2C(scl = Pin(22), sda = Pin(21), freq = 100000)   
+        self.i2c.scan()
         self.addr = addr
-        self.iic.start()
-        self.iic.writeto(self.addr, bytearray([107, 0]))
-        self.iic.stop()
+        self.chip_id = int(unp('>h', self._read(14, 0x75, self.mpu_addr))[0])
+        print('chip_id', self.chip_id)
+        self.i2c.start()
+        self.i2c.writeto(self.addr, bytearray([107, 0]))
+        self.i2c.stop()
 
         # now apply user setting for interrupts
         self.disable_interrupts = disable_interrupts        
@@ -59,11 +66,9 @@ class accel():
         irq_state = True
         if self.disable_interrupts:
             irq_state = machine.disable_irq()
-        self.iic.start()
-        result = self.iic.readfrom_mem(
-                                        devaddr,
-                                        memaddr, count)
-        self.iic.stop()                                
+        self.i2c.start()
+        result = self.i2c.readfrom_mem(devaddr,memaddr,count)
+        self.i2c.stop()                                
         machine.enable_irq(irq_state)
         return result
 
@@ -75,11 +80,9 @@ class accel():
         irq_state = True
         if self.disable_interrupts:
             irq_state = machine.disable_irq()
-        self.iic.start()    
-        result = self.iic.writeto_mem(
-                                         devaddr,
-                                         memaddr, data)
-        self.iic.stop()                                   
+        self.i2c.start()    
+        result = self.i2c.writeto_mem(devaddr,memaddr,data)
+        self.i2c.stop()                                   
         machine.enable_irq(irq_state)
         return result
 
@@ -95,14 +98,14 @@ class accel():
             if accel_range is None:
                 pass
             else:
-                arl = [0x00, 0x08, 0x10, 0x18]                
+                arl = (0x00, 0x08, 0x10, 0x18)                
                 ar = arl[accel_range]
                 try:
                     self._write(bytearray(ar), 0x1C, self.addr)
                 except IndexError:
                     print('accel_range can only be 0, 1, 2 or 3')
             # get range
-            ari = int(unp('<H', self._read(1, 0x1C, self.addr))[0]/8)
+            ari = int(unp('<H', self._read(14, 0x1C, self.addr))[0]/8)
         except OSError:
             ari = None
         if ari is not None:
@@ -121,14 +124,14 @@ class accel():
             if gyro_range is None:
                 pass
             else:
-                grl = [0x00, 0x08, 0x10, 0x18]
+                grl = (0x00, 0x08, 0x10, 0x18)
                 gr = grl[gyro_range]
                 try:
                     self._write(bytearray(gr), 0x1B, self.addr)              
                 except IndexError:
                     print('gyro_range can only be 0, 1, 2 or 3')
             # get range
-            gri = int(unp('<H', self._read(1, 0x1B, self.addr))[0]/8)
+            gri = int(unp('<H', self._read(14, 0x1B, self.addr))[0]/8)
         except OSError:
             gri = None
 
@@ -137,9 +140,9 @@ class accel():
         return gri
 
     def get_raw_values(self):
-        self.iic.start()
-        a = self.iic.readfrom_mem(self.addr, 0x3B, 14)
-        self.iic.stop()
+        self.i2c.start()
+        a = self.i2c.readfrom_mem(self.addr, 0x3B, 14)
+        self.i2c.stop()
         return a
 
     def get_ints(self):
