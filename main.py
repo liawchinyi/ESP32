@@ -4,7 +4,7 @@
 # C:\Python39\Lib\site-packages>esptool.py erase_flash
 # C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-20210418-v1.15.bin
 # Complete project details at https://RandomNerdTutorials.com
-# jeffm   - 23.4.2015
+# 
 import time
 import sys
 from time import ticks_us, ticks_cpu, sleep
@@ -26,7 +26,7 @@ if BOOT_sw.value() == 0:
     sys.exit()
     
 import mpu6050
-i2c = I2C(scl = Pin(22), sda = Pin(21), freq = 400000)
+i2c = I2C(scl = Pin(22), sda = Pin(21), freq = 100000)
 
 #initializing the I2C method for ESP32
 imu= mpu6050.accel(i2c)
