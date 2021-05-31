@@ -7,7 +7,7 @@
 # 
 import time
 import sys
-from time import ticks_us, ticks_cpu, sleep
+from time import ticks_us, ticks_cpu, sleep, sleep_us
 import machine
 from machine import I2C, Pin, Timer, sleep
 
@@ -15,52 +15,44 @@ from machine import I2C, Pin, Timer, sleep
 from nemastepper import Stepper
 motor1 = Stepper(26,25,12)#nemastepper
 motor2 = Stepper(33,32,14)#nemastepper
-#motor1 = Stepper(25,26,12)
-#motor2 = Stepper(32,33,14)
 
 led = Pin(19, Pin.OUT)
 led.value(1)
 BOOT_sw = Pin(0, Pin.IN, Pin.PULL_UP)#输入红外探头
 
+print('BOOT Pin = ', BOOT_sw.value())
+
 if BOOT_sw.value() == 0:
+    print ('program terminated')
     sys.exit()
     
 from mpu6050 import mpu6050
-#initializing the I2C method for ESP32
-imu = mpu6050(2,False)
+imu = mpu6050()
 
 def step_cb(self):
     global motor1, motor2
     motor1.do_step()
     motor2.do_step()
-    #motor1.steps(10)
-    #motor2.steps(10)
 
 def led_cb(self):
     global led
     led.value(not led.value())
 
 #initializing the timer
-timer=Timer(4)
-timer.init(freq=2, mode=Timer.PERIODIC, callback=led_cb)
-#initializing the timer
+#timer=Timer(4)
+#timer.init(freq=2, mode=Timer.PERIODIC, callback=led_cb)
 
-tim=Timer(6)
-tim.init(freq=20000, mode=Timer.PERIODIC, callback=step_cb)   
-#initializing the timer
-
-motor1.MAX_ACCEL = 1000  
-motor2.MAX_ACCEL = 1000  
-speed = 3000
-motor1.set_speed(speed)
-motor2.set_speed(speed)
-#motor1.set_step_time(1)
-#motor2.set_step_time(1)
+tim=Timer(8)
+tim.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb)   
 
 # Complementary Filter A = rt/(rt + dt) where rt is response time, dt = period
 def compf(fangle,accel,gyro,looptime,A):
     fangle = A * (fangle + gyro * looptime/1000000) + (1-A) * accel
     return fangle
+
+#set up wifi radio control
+#import wifiradio
+#radio = wifiradio.WiFiRadio(1)
 
 MAX_VEL = 2000 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
 MAX_ANGLE = 10  # degrees of tilt for speed control
@@ -94,19 +86,20 @@ def speedcontrol(target,current):
 
 #main balance loop runs every 5ms
 def balance():
+    global motor1, motor2, imu
     gangle = 0.0
     start = ticks_us()
     controlspeed = 0
     fspeed = 0
     while abs(gangle) < 45:  # give up if inclination angle >=45 degrees
         angle  = imu.pitch()
-        rate   = imu.get_gy()
+        rate   = imu.get_gy()        
         gangle = compf(gangle, angle, rate, (ticks_us()-start),0.99)         
         start = ticks_us()
         # speed control
         actualspeed = (motor1.get_speed()+motor2.get_speed())/2
         fspeed = 0.95 * fspeed + 0.05 * actualspeed
-        cmd = [0.0, 0.0] #radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
+        cmd = [0,100]#radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
         tangle = speedcontrol(800*cmd[1],fspeed)
          # stability control
         controlspeed += stability(tangle, gangle, rate)           
@@ -114,36 +107,34 @@ def balance():
         # set motor speed
         motor1.set_speed(-controlspeed-int(300*cmd[0]))
         motor2.set_speed(-controlspeed+int(300*cmd[0]))
-        sleep(5000-(ticks_us()-start))
+        sleep_us(5000-(ticks_us()-start))
     # stop and turn off motors
     motor1.set_speed(0)
     motor2.set_speed(0)
     motor1.set_off()
     motor2.set_off()
 
-array = imu.get_values()
-print(array)
 print ('start')
 count = 0
+motor1.set_speed(3000)
+motor2.set_speed(3000)
 while count < 5000 and BOOT_sw.value() == 1:
     count = count + 1
-    array = imu.get_values()
-    speed = array["GyY"]+array["AcX"]
-    tim.init(callback=step_cb) #start interrupt routine
+    tim.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb) 
     balance()
-    tim.init(callback=None)
-    #print(count, speed, array)
-    #sleep(100)
+    tim.deinit()
+    led.value(not led.value())
+    angle  = imu.pitch()
+    rate   = imu.get_gy()
+    motor1speed = motor1.get_speed()  
+    motor2speed = motor2.get_speed()    
+    print('angle = ',angle,'rate = ',rate,'motor1speed = ', motor1speed, 'motor2speed = ', motor2speed)
 
 print ('exit')
-print(array)   
 
 motor1.set_speed(0)
 motor1.set_off()
 motor2.set_speed(0)
 motor2.set_off()
-
-#motor1.power_off()
-#motor2.power_off()
-timer.deinit()
+#timer.deinit()
 tim.deinit()

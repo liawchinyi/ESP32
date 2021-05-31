@@ -3,16 +3,7 @@ import os
 from struct import unpack as unp
 from math import atan2,degrees,pi
 from machine import I2C, Pin, Timer, sleep
-'''
-def ar(i):
-    switcher={
-            0: 0x00,
-            1: 0x08,
-            2: 0x10,
-            3: 0x18
-            }
-    return switcher.get(i,"Invalid")
-'''
+
 class mpu6050():
     '''
     Module for the MPY6050 6DOF IMU. 
@@ -23,22 +14,18 @@ class mpu6050():
     mpu_addr = 0x68  # address of MPU6050
     _I2Cerror = "I2C communication failure"
 
-    def __init__(self, side=1, disable_interrupts=False):
+    def __init__(self):
         addr=0x68
         # create i2c object
-        self._timeout = 10
         self.disable_interrupts = False
-        self.i2c = I2C(scl = Pin(22), sda = Pin(21), freq = 100000)   
-        self.i2c.scan()
+        self.i2c = I2C(scl = Pin(22), sda = Pin(21), freq = 400000)   
         self.addr = addr
         self.chip_id = int(unp('>h', self._read(14, 0x75, self.mpu_addr))[0])
-        print('chip_id', self.chip_id)
+        print('mpu6050 chip id is', self.chip_id)
         self.i2c.start()
         self.i2c.writeto(self.addr, bytearray([107, 0]))
         self.i2c.stop()
-
-        # now apply user setting for interrupts
-        self.disable_interrupts = disable_interrupts        
+ 
         # wake it up
         self.wake()
         self.accel_range(1)
@@ -48,24 +35,14 @@ class mpu6050():
 
     # wake
     def wake(self):
-        '''
-        Wakes the device.
-        '''
-        try:
-            self._write(bytearray(0x01), 0x6B, self.mpu_addr)
-        except OSError:
-            print(accel._I2Cerror)
+        self.i2c.start()
+        self.i2c.writeto_mem(self.addr, 0x6B, b'\x01')
+        self.i2c.stop()
         return 'awake'
 
     # read from device
     def _read(self, count, memaddr, devaddr):
-        '''
-        Perform a memory read. Caller should trap OSError. Possible values of
-        error args[0]: errorno.ETIMEDOUT errno.EBUSY or errno.EIO
-        '''
-        irq_state = True
-        if self.disable_interrupts:
-            irq_state = machine.disable_irq()
+        irq_state = machine.disable_irq()
         self.i2c.start()
         result = self.i2c.readfrom_mem(devaddr,memaddr,count)
         self.i2c.stop()                                
@@ -74,12 +51,7 @@ class mpu6050():
 
     # write to device
     def _write(self, data, memaddr, devaddr):
-        '''
-        Perform a memory write. Caller should trap OSError.
-        '''
-        irq_state = True
-        if self.disable_interrupts:
-            irq_state = machine.disable_irq()
+        irq_state = machine.disable_irq()
         self.i2c.start()    
         result = self.i2c.writeto_mem(devaddr,memaddr,data)
         self.i2c.stop()                                   
@@ -88,55 +60,24 @@ class mpu6050():
 
     # accelerometer range
     def accel_range(self, accel_range=None):
-        '''
-        Returns the accelerometer range or sets it to the passed arg.
-        Pass:               0   1   2   3
-        for range +/-:      2   4   8   16  g 
-        '''
-        # set range
-        try:
-            if accel_range is None:
-                pass
-            else:
-                arl = (0x00, 0x08, 0x10, 0x18)                
-                ar = arl[accel_range]
-                try:
-                    self._write(bytearray(ar), 0x1C, self.addr)
-                except IndexError:
-                    print('accel_range can only be 0, 1, 2 or 3')
-            # get range
-            ari = int(unp('<H', self._read(14, 0x1C, self.addr))[0]/8)
-        except OSError:
-            ari = None
-        if ari is not None:
-            self._ar = ari
+        self.i2c.start()
+        self.i2c.writeto_mem(self.addr, 0x1C, b'\x08')
+        self.i2c.stop()
+        self.i2c.start()
+        ari = self.i2c.readfrom_mem(self.addr, 0x1C, 1)
+        self.i2c.stop()
+        self._ar = ari
         return ari
 
     # gyroscope range
     def gyro_range(self, gyro_range=None):
-        '''
-        Returns the gyroscope range or sets it to the passed arg.
-        Pass:               0   1   2    3
-        for range +/-:      250 500 1000 2000  degrees/second
-        '''
-        # set range
-        try:
-            if gyro_range is None:
-                pass
-            else:
-                grl = (0x00, 0x08, 0x10, 0x18)
-                gr = grl[gyro_range]
-                try:
-                    self._write(bytearray(gr), 0x1B, self.addr)              
-                except IndexError:
-                    print('gyro_range can only be 0, 1, 2 or 3')
-            # get range
-            gri = int(unp('<H', self._read(14, 0x1B, self.addr))[0]/8)
-        except OSError:
-            gri = None
-
-        if gri is not None:
-            self._gr = gri
+        self.i2c.start()
+        self.i2c.writeto_mem(self.addr, 0x1B, b'\x00')
+        self.i2c.stop()    
+        self.i2c.start()
+        gri = self.i2c.readfrom_mem(self.addr, 0x1B, 1)
+        self.i2c.stop()
+        self._gr = gri
         return gri
 
     def get_raw_values(self):
@@ -178,44 +119,32 @@ class mpu6050():
 
     # get raw acceleration
     def get_accel_raw(self):
-        '''
-        Returns the accelerations on xyz in bytes.
-        '''
-        try:
-            axyz = self._read(6, 0x3B, self.mpu_addr)
-        except OSError:
-            axyz = b'\x00\x00\x00\x00\x00\x00'
+        self.i2c.start()
+        axyz = self.i2c.readfrom_mem(self.addr, 0x3B, 6)
+        self.i2c.stop()
         return axyz
+
+    # get raw gyro
+    def get_gyro_raw(self):
+        self.i2c.start()
+        gxyz = self.i2c.readfrom_mem(self.addr, 0x43, 6)
+        self.i2c.stop()         
+        return gxyz   
 
     # get pitch  
     def pitch(self):
-        '''
-        Returns pitch angle in degrees based on x and c accelerations.
-        
-        '''
         scale = (16384, 8192, 4096, 2048)
         raw = self.get_accel_raw()
-        x = unp('>h', raw[0:2])[0]/scale[self._ar]
-        z = unp('>h', raw[4:6])[0]/scale[self._ar]
+        x = self.bytes_toint(raw[0], raw[1]) #unp('>h', raw[0:2])[0]/scale[self._ar]
+        z = self.bytes_toint(raw[4], raw[5]) #unp('>h', raw[4:6])[0]/scale[self._ar]
         pitch = degrees(pi+atan2(-x,-z))
         if (pitch>=180) and (pitch<=360):
             pitch-=360
         return -pitch
 
-    # get raw gyro
-    def get_gyro_raw(self):
-        '''
-        Returns the turn rate on xyz in bytes.
-        '''
-        try:
-            gxyz = self._read(6, 0x43, self.mpu_addr)
-        except OSError:
-            gxyz = b'\x00\x00\x00\x00\x00\x00'
-        return gxyz        
-
     # get gyro pitch - y - axis in degrees
     def get_gy(self):
         scale = (131.0, 65.5, 32.8, 16.4)
         raw = self.get_gyro_raw()
-        gy =  unp('>h', raw[2:4])[0]/scale[self._gr]
+        gy =  self.bytes_toint(raw[2], raw[3]) #unp('>h', raw[2:4])[0]/scale[self._gr]
         return gy    
