@@ -99,7 +99,7 @@ def balance():
         # speed control
         actualspeed = (motor1.get_speed()+motor2.get_speed())/2
         fspeed = 0.95 * fspeed + 0.05 * actualspeed
-        cmd = [0,100]#radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
+        cmd = [0,10]#radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
         tangle = speedcontrol(800*cmd[1],fspeed)
          # stability control
         controlspeed += stability(tangle, gangle, rate)           
@@ -116,8 +116,7 @@ def balance():
 
 print ('start')
 count = 0
-motor1.set_speed(3000)
-motor2.set_speed(3000)
+
 while count < 5000 and BOOT_sw.value() == 1:
     count = count + 1
     tim.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb) 

@@ -35,9 +35,7 @@ class mpu6050():
 
     # wake
     def wake(self):
-        self.i2c.start()
-        self.i2c.writeto_mem(self.addr, 0x6B, b'\x01')
-        self.i2c.stop()
+        self._write(b'\x01', 0x6B, self.addr)
         return 'awake'
 
     # read from device
@@ -60,30 +58,20 @@ class mpu6050():
 
     # accelerometer range
     def accel_range(self, accel_range=None):
-        self.i2c.start()
-        self.i2c.writeto_mem(self.addr, 0x1C, b'\x08')
-        self.i2c.stop()
-        self.i2c.start()
-        ari = self.i2c.readfrom_mem(self.addr, 0x1C, 1)
-        self.i2c.stop()
+        self._write(b'\x08', 0x1C, self.addr)
+        ari = self._read(1, 0x1C, self.addr)
         self._ar = ari
         return ari
 
     # gyroscope range
     def gyro_range(self, gyro_range=None):
-        self.i2c.start()
-        self.i2c.writeto_mem(self.addr, 0x1B, b'\x00')
-        self.i2c.stop()    
-        self.i2c.start()
-        gri = self.i2c.readfrom_mem(self.addr, 0x1B, 1)
-        self.i2c.stop()
+        self._write(b'\x00', 0x1B, self.addr)
+        gri = self._read(1, 0x1B, self.addr)
         self._gr = gri
         return gri
 
     def get_raw_values(self):
-        self.i2c.start()
-        a = self.i2c.readfrom_mem(self.addr, 0x3B, 14)
-        self.i2c.stop()
+        a = self._read(14, 0x3B, self.addr)
         return a
 
     def get_ints(self):
@@ -119,24 +107,20 @@ class mpu6050():
 
     # get raw acceleration
     def get_accel_raw(self):
-        self.i2c.start()
-        axyz = self.i2c.readfrom_mem(self.addr, 0x3B, 6)
-        self.i2c.stop()
+        axyz = self._read(6, 0x3B, self.addr)
         return axyz
 
     # get raw gyro
     def get_gyro_raw(self):
-        self.i2c.start()
-        gxyz = self.i2c.readfrom_mem(self.addr, 0x43, 6)
-        self.i2c.stop()         
+        gxyz = self._read(6, 0x43, self.addr)       
         return gxyz   
 
     # get pitch  
     def pitch(self):
         scale = (16384, 8192, 4096, 2048)
         raw = self.get_accel_raw()
-        x = self.bytes_toint(raw[0], raw[1]) #unp('>h', raw[0:2])[0]/scale[self._ar]
-        z = self.bytes_toint(raw[4], raw[5]) #unp('>h', raw[4:6])[0]/scale[self._ar]
+        x = self.bytes_toint(raw[0], raw[1])/8192 #unp('>h', raw[0:2])[0]/scale[self._ar]
+        z = self.bytes_toint(raw[4], raw[5])/8192 #unp('>h', raw[4:6])[0]/scale[self._ar]
         pitch = degrees(pi+atan2(-x,-z))
         if (pitch>=180) and (pitch<=360):
             pitch-=360
