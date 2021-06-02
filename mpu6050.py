@@ -33,11 +33,6 @@ class mpu6050():
         self.gyro_range(0)
         self._gr = self.gyro_range()
 
-    # wake
-    def wake(self):
-        self._write(b'\x01', 0x6B, self.addr)
-        return 'awake'
-
     # read from device
     def _read(self, count, memaddr, devaddr):
         irq_state = machine.disable_irq()
@@ -56,18 +51,66 @@ class mpu6050():
         machine.enable_irq(irq_state)
         return result
 
+    # wake
+    def wake(self):
+        '''
+        Wakes the device.
+        '''
+        try:
+            self._write(b'\x01', 0x6B, self.mpu_addr)
+        except OSError:
+            print(mpu6050._I2Cerror)
+        return 'awake'
+
     # accelerometer range
     def accel_range(self, accel_range=None):
-        self._write(b'\x08', 0x1C, self.addr)
-        ari = self._read(1, 0x1C, self.addr)
-        self._ar = ari
+        '''
+        Returns the accelerometer range or sets it to the passed arg.
+        Pass:               0   1   2   3
+        for range +/-:      2   4   8   16  g 
+        '''
+        # set range
+        try:
+            if accel_range is None:
+                pass
+            else:
+                ar = (0x00, 0x08, 0x10, 0x18)
+                try:
+                    self._write(b'\x08', 0x1C, self.addr)
+                except IndexError:
+                    print('accel_range can only be 0, 1, 2 or 3')
+            # get range
+            ari = int(unp('<H', self._read(2, 0x1C, self.mpu_addr))[0]/8)
+        except OSError:
+            ari = None
+        if ari is not None:
+            self._ar = ari
         return ari
 
     # gyroscope range
     def gyro_range(self, gyro_range=None):
-        self._write(b'\x00', 0x1B, self.addr)
-        gri = self._read(1, 0x1B, self.addr)
-        self._gr = gri
+        '''
+        Returns the gyroscope range or sets it to the passed arg.
+        Pass:               0   1   2    3
+        for range +/-:      250 500 1000 2000  degrees/second
+        '''
+        # set range
+        try:
+            if gyro_range is None:
+                pass
+            else:
+                gr = (0x00, 0x08, 0x10, 0x18)
+                try:
+                    self._write(b'\x00', 0x1B, self.addr)
+                except IndexError:
+                    print('gyro_range can only be 0, 1, 2 or 3')
+            # get range
+            gri = int(unp('<H', self._read(2, 0x1B, self.mpu_addr))[0]/8)
+        except OSError:
+            gri = None
+
+        if gri is not None:
+            self._gr = gri
         return gri
 
     def get_raw_values(self):
@@ -107,20 +150,32 @@ class mpu6050():
 
     # get raw acceleration
     def get_accel_raw(self):
-        axyz = self._read(6, 0x3B, self.addr)
+        '''
+        Returns the accelerations on xyz in bytes.
+        '''
+        try:
+            axyz = self._read(6, 0x3B, self.mpu_addr)
+        except OSError:
+            axyz = b'\x00\x00\x00\x00\x00\x00'
         return axyz
 
     # get raw gyro
     def get_gyro_raw(self):
-        gxyz = self._read(6, 0x43, self.addr)       
-        return gxyz   
+        '''
+        Returns the turn rate on xyz in bytes.
+        '''
+        try:
+            gxyz = self._read(6, 0x43, self.mpu_addr)
+        except OSError:
+            gxyz = b'\x00\x00\x00\x00\x00\x00'
+        return gxyz
 
     # get pitch  
     def pitch(self):
         scale = (16384, 8192, 4096, 2048)
         raw = self.get_accel_raw()
-        x = self.bytes_toint(raw[0], raw[1])/8192 #unp('>h', raw[0:2])[0]/scale[self._ar]
-        z = self.bytes_toint(raw[4], raw[5])/8192 #unp('>h', raw[4:6])[0]/scale[self._ar]
+        x = unp('>h', raw[0:2])[0]/8192
+        z = unp('>h', raw[4:6])[0]/8192
         pitch = degrees(pi+atan2(-x,-z))
         if (pitch>=180) and (pitch<=360):
             pitch-=360
@@ -130,5 +185,5 @@ class mpu6050():
     def get_gy(self):
         scale = (131.0, 65.5, 32.8, 16.4)
         raw = self.get_gyro_raw()
-        gy =  self.bytes_toint(raw[2], raw[3]) #unp('>h', raw[2:4])[0]/scale[self._gr]
+        gy =  unp('>h', raw[2:4])[0]/131.0 #self.bytes_toint(raw[2], raw[3]) / 131.0
         return gy    

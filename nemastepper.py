@@ -1,5 +1,7 @@
-
-from machine import Pin
+import machine
+from machine import Pin, PWM
+import time
+from time import ticks_us, ticks_cpu, sleep, sleep_us, sleep_ms
 
 class Stepper():
     """
@@ -7,6 +9,7 @@ class Stepper():
     """
     def __init__(self, dir_pin, step_pin, enable_pin):
         self.step_pin = Pin(step_pin, Pin.OUT)
+        self.pwm_pin = PWM(self.step_pin)
         self.dir_pin = Pin(dir_pin, Pin.OUT)
         self.enable_pin = Pin(enable_pin, Pin.OUT)
         self.enable_pin.on()      
@@ -19,11 +22,12 @@ class Stepper():
     def do_step(self):   # called by timer interrupt every 100us
         if self.dir == 0:
             return
-        self.count = (self.count+1)%(self.pulserate+1)
+        self.count = (self.count+1)%(self.pulserate)        
+        '''
         if self.count == 0:
             self.step_pin.on()
             pass
-            self.step_pin.off()
+            self.step_pin.off()'''
         
     def set_speed(self, speed): #called periodically
         if (self.speed - speed) > self.MAX_ACCEL:
@@ -32,6 +36,7 @@ class Stepper():
             self.speed+=self.MAX_ACCEL
         else:
             self.speed = speed
+        self.pwm_pin.freq(abs(self.speed))    
         # set direction
         if self.speed>0:
             self.dir = 1
@@ -44,7 +49,7 @@ class Stepper():
         else:
             self.dir = 0
         if abs(self.speed)>0:
-            self.pulserate = 10000//(abs(self.speed)+1)
+            self.pulserate = 10000//(abs(self.speed))
 
     def set_off(self):
         self.enable_pin.on()
