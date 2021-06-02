@@ -36,7 +36,7 @@ class Stepper():
             self.speed+=self.MAX_ACCEL
         else:
             self.speed = speed
-        self.pwm_pin.freq(abs(self.speed))    
+            
         # set direction
         if self.speed>0:
             self.dir = 1
@@ -50,14 +50,13 @@ class Stepper():
             self.dir = 0
         if abs(self.speed)>0:
             self.pulserate = 10000//(abs(self.speed))
+            self.pwm_pin.freq(abs(self.speed))
 
     def set_off(self):
         self.enable_pin.on()
 
     def get_speed(self):
         return self.speed
-       
-
                 
             
         

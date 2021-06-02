@@ -4,20 +4,23 @@
 # C:\Python39\Lib\site-packages>esptool.py erase_flash
 # C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-20210418-v1.15.bin
 # Complete project details at https://RandomNerdTutorials.com
-# 
+# https://docs.micropython.org/en/latest/esp32/quickref.html
 import ubluetooth
 import time
 import sys
+import esp
+import esp32
 from time import ticks_us, ticks_cpu, sleep, sleep_us, sleep_ms
 import machine
 from machine import I2C, Pin, Timer, sleep, PWM
-
+#machine.freq(240000000)
 # set up stepper motors
 from nemastepper import Stepper
 motor1 = Stepper(26,25,12)#nemastepper
 motor2 = Stepper(33,32,14)#nemastepper
 
-led = PWM(Pin(19), 1)
+led = PWM(Pin(19))
+led.freq(1)
 
 BOOT_sw = Pin(0, Pin.IN, Pin.PULL_UP) #输入红外探头
 
@@ -40,8 +43,8 @@ def led_cb(self):
     led.value(not led.value())
 
 #initializing the timer
-#tim=Timer(7)
-#tim.init(freq=10000, mode=Timer.PERIODIC, callback=step_cb)
+#tim=Timer(3)
+#tim.init(freq=200, mode=Timer.PERIODIC, callback=lambda t:balance)
 
 # Complementary Filter A = rt/(rt + dt) where rt is response time, dt = period
 def compf(fangle,accel,gyro,looptime,A):
@@ -113,8 +116,8 @@ def balance(self):
         controlspeed += delta         
         controlspeed = constrain(controlspeed,-MAX_VEL,MAX_VEL)
         # set motor speed
-        motor1.set_speed(-controlspeed-int(300*cmd[0]))
-        motor2.set_speed(controlspeed+int(300*cmd[0]))
+        motor2.set_speed(-controlspeed-int(300*cmd[0]))
+        motor1.set_speed(controlspeed+int(300*cmd[0]))
     else :    
         # stop and turn off motors
         motor1.set_speed(0)
@@ -123,17 +126,18 @@ def balance(self):
         motor2.set_off()
 
 print ('start')
-delay_start = ticks_us()
-print_start = ticks_us()
-while BOOT_sw.value() == 1 :
-    
-    if (ticks_us()-delay_start) > 1000 :
-        balance(1)
-        delay_start = ticks_us()
+delay_start = time.ticks_ms()
+print_start = time.ticks_ms()
 
-    if (ticks_us()-print_start) > 100000 :
+while BOOT_sw.value() == 1 :
+
+    if (time.ticks_ms()-delay_start) > 5 :
+        balance(1)
+        delay_start = time.ticks_ms()
+
+    if (time.ticks_ms()-print_start) > 100 :
         print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
-        print_start = ticks_us()
+        print_start = time.ticks_ms()
 
 print ('exit')
 
