@@ -107,7 +107,7 @@ def balance(self):
         # speed control
         motor1speed = motor1.get_speed()
         motor2speed = motor2.get_speed()
-        actualspeed = (motor1speed+motor2speed)/4
+        actualspeed = (motor1speed+motor2speed)/2
         fspeed = 0.95 * fspeed + 0.05 * actualspeed
         cmd = [0,2] #radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
         tangle = speedcontrol(80*cmd[1],fspeed)
