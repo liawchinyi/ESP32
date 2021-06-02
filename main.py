@@ -19,14 +19,11 @@ from nemastepper import Stepper
 motor1 = Stepper(26,25,12)#nemastepper
 motor2 = Stepper(33,32,14)#nemastepper
 
-led = PWM(Pin(19))
-led.freq(1)
+led = PWM(Pin(19), freq=1, duty=512) # create and configure in one go
 
-BOOT_sw = Pin(0, Pin.IN, Pin.PULL_UP) #输入红外探头
+BOOT_sw = Pin(0, Pin.IN, Pin.PULL_UP) # 输入
 
-print('BOOT Pin = ', BOOT_sw.value())
-
-if BOOT_sw.value() == 0:
+if BOOT_sw.value() == 0: # Press to terminate program
     print ('program terminated')
     sys.exit()
     
@@ -70,7 +67,6 @@ def constrain(val,minv,maxv):
 K = 6 # 7
 Kp = 4.0
 Kd = 0.5
-
 def stability(target,current,rate):
     global K,Kp,Kd
     error = target - current
@@ -101,7 +97,7 @@ def balance(self):
     start = ticks_us()
     angle  = imu.pitch() + 4
     rate   = imu.get_gy() + 4
-    gangle = compf(gangle, angle, rate, (ticks_us()-start),0.99) 
+    gangle = compf(gangle, angle, rate, (ticks_us()-start), 0.99) 
     if abs(gangle) < 45 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees
         start = ticks_us()
         # speed control
@@ -116,8 +112,8 @@ def balance(self):
         controlspeed += delta         
         controlspeed = constrain(controlspeed,-MAX_VEL,MAX_VEL)
         # set motor speed
-        motor2.set_speed(-controlspeed-int(300*cmd[0]))
-        motor1.set_speed(controlspeed+int(300*cmd[0]))
+        motor2.set_speed(-controlspeed-int(30*cmd[0]))
+        motor1.set_speed(controlspeed+int(30*cmd[0]))
     else :    
         # stop and turn off motors
         motor1.set_speed(0)
@@ -131,7 +127,7 @@ print_start = time.ticks_ms()
 
 while BOOT_sw.value() == 1 :
 
-    if (time.ticks_ms()-delay_start) > 5 :
+    if (time.ticks_ms()-delay_start) > 4 :
         balance(1)
         delay_start = time.ticks_ms()
 
@@ -145,4 +141,5 @@ motor1.set_speed(0)
 motor1.set_off()
 motor2.set_speed(0)
 motor2.set_off()
+led.deinit()
 #tim.deinit()
