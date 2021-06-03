@@ -64,7 +64,7 @@ def constrain(val,minv,maxv):
         return val
 
 #stability PD controiller - input is target angle, output is acceleration
-K = 6 # 7
+K = 7 # 7
 Kp = 4.0
 Kd = 0.5
 def stability(target,current,rate):
@@ -95,8 +95,8 @@ def balance(self):
     global motor1, motor2, imu, angle, rate, motor2speed
     global gangle, controlspeed, fspeed, delta, tangle, motor1speed
     start = ticks_us()
-    angle  = imu.pitch() + 1
-    rate   = imu.get_gy() + 4
+    angle  = imu.pitch() + 0
+    rate   = imu.get_gy() + 3
     gangle = compf(gangle, angle, rate, (ticks_us()-start), 0.99) 
     if abs(gangle) < 45 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees
         start = ticks_us()
@@ -127,7 +127,7 @@ print_start = time.ticks_ms()
 
 while BOOT_sw.value() == 1 :
 
-    if (time.ticks_ms()-delay_start) > 3 :
+    if (time.ticks_ms()-delay_start) > 4 :
         balance(1)
         delay_start = time.ticks_ms()
 
