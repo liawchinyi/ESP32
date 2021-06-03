@@ -53,7 +53,7 @@ def compf(fangle,accel,gyro,looptime,A):
 #radio = wifiradio.WiFiRadio(1)
 
 MAX_VEL = 2000 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
-MAX_ANGLE = 25  # degrees of tilt for speed control
+MAX_ANGLE = 20  # degrees of tilt for speed control
 
 def constrain(val,minv,maxv):
     if val<minv:
@@ -95,8 +95,8 @@ def balance(self):
     global motor1, motor2, imu, angle, rate, motor2speed
     global gangle, controlspeed, fspeed, delta, tangle, motor1speed
     start = ticks_us()
-    angle  = imu.pitch() + 5
-    rate   = imu.get_gy() + 5
+    angle  = imu.pitch() + 1
+    rate   = imu.get_gy() + 4
     gangle = compf(gangle, angle, rate, (ticks_us()-start), 0.99) 
     if abs(gangle) < 45 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees
         start = ticks_us()
@@ -112,8 +112,8 @@ def balance(self):
         controlspeed += delta         
         controlspeed = constrain(controlspeed,-MAX_VEL,MAX_VEL)
         # set motor speed
-        motor2.set_speed(-controlspeed-int(30*cmd[0]))
-        motor1.set_speed(controlspeed+int(30*cmd[0]))
+        motor1.set_speed(-controlspeed-int(30*cmd[0]))
+        motor2.set_speed(controlspeed+int(30*cmd[0]))
     else :    
         # stop and turn off motors
         motor1.set_speed(0)

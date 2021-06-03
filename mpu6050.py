@@ -176,9 +176,9 @@ class mpu6050():
         raw = self.get_accel_raw()
         x = unp('>h', raw[0:2])[0]/8192
         z = unp('>h', raw[4:6])[0]/8192
-        pitch = degrees(pi+atan2(-x,-z))
-        if (pitch>=180) and (pitch<=360):
-            pitch-=360
+        pitch = degrees(pi+atan2(-x,-z)) - 180
+        #if (pitch>=180) and (pitch<=360):
+            #pitch-=360
         return -pitch
 
     # get gyro pitch - y - axis in degrees
