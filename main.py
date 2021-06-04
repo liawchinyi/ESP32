@@ -2,10 +2,10 @@
 # cd C:\Python39\Lib\site-packages
 # https://microcontrollerslab.com/micropython-mpu-6050-esp32-esp8266/
 # C:\Python39\Lib\site-packages>esptool.py erase_flash
-# C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-20210418-v1.15.bin
+# C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-idf3-20210202-v1.14.bin
 # Complete project details at https://RandomNerdTutorials.com
 # https://docs.micropython.org/en/latest/esp32/quickref.html
-
+# http://micropython.org/webrepl/
 import sys
 import time
 from time import ticks_us, ticks_cpu, sleep, sleep_us, sleep_ms
@@ -116,7 +116,7 @@ while BOOT_sw.value() == 1 :
         delay_start = time.ticks_ms()
 
     if (time.ticks_ms()-print_start) > 100 :
-        print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
+        #print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
         print_start = time.ticks_ms()
 
 print ('exit')
