@@ -5,6 +5,7 @@
 # C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-20210418-v1.15.bin
 # Complete project details at https://RandomNerdTutorials.com
 # https://docs.micropython.org/en/latest/esp32/quickref.html
+
 import sys
 import time
 from time import ticks_us, ticks_cpu, sleep, sleep_us, sleep_ms
@@ -31,8 +32,8 @@ imu = mpu6050()
 #import wifiradio
 #radio = wifiradio.WiFiRadio(1)
 
-MAX_VEL = 2000 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
-MAX_ANGLE = 10  # degrees of tilt for speed control
+MAX_VEL = 2500 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
+MAX_ANGLE = 15  # degrees of tilt for speed control
 
 def constrain(val,minv,maxv):
     if val<minv:
@@ -66,8 +67,8 @@ motor1speed = 0
 motor2speed = 0
 #stability PD controiller - input is target angle, output is acceleration
 K = 6 # 7
-Kp = 25.0 # 4
-Kd = 0.5 # 0.4
+Kp = 50.0 # 4
+Kd = 1.1 # 0.4
 def stability(target,current,rate):
     global K,Kp,Kd
     error = target - current
@@ -78,7 +79,7 @@ def balance(self):
     global motor1, motor2, imu, angle, rate, motor2speed
     global gangle, controlspeed, fspeed, delta, tangle, motor1speed
     start = ticks_us()
-    angle  = imu.pitch() - 1
+    angle  = imu.pitch() - 2
     rate   = imu.get_gy() + 28
     gangle = compf(gangle, angle, rate, (ticks_us()-start), 0.99) 
     if abs(gangle) < 45 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees

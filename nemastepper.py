@@ -17,7 +17,7 @@ class Stepper():
         self.pulserate = 100
         self.count = 0
         self.speed = 0
-        self.MAX_ACCEL = 25   #equivallent to 100 x (periodicity of set_speed) usteps/sec/sec
+        self.MAX_ACCEL = 30   #equivallent to 100 x (periodicity of set_speed) usteps/sec/sec
  
     def do_step(self):   # called by timer interrupt every 100us
         if self.dir == 0:
