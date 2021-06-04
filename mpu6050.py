@@ -76,7 +76,7 @@ class mpu6050():
             else:
                 ar = (0x00, 0x08, 0x10, 0x18)
                 try:
-                    self._write(b'\x08', 0x1C, self.addr)
+                    self._write(b'\x08', 0x1C, self.addr)#x08
                 except IndexError:
                     print('accel_range can only be 0, 1, 2 or 3')
             # get range
@@ -185,5 +185,5 @@ class mpu6050():
     def get_gy(self):
         scale = (131.0, 65.5, 32.8, 16.4)
         raw = self.get_gyro_raw()
-        gy =  unp('>h', raw[2:4])[0]/131.0 #self.bytes_toint(raw[2], raw[3]) / 131.0
+        gy =  unp('>h', raw[2:4])[0]/16.4 #self.bytes_toint(raw[2], raw[3]) / 131.0
         return gy    
