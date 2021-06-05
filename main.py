@@ -33,7 +33,7 @@ imu = mpu6050()
 #radio = wifiradio.WiFiRadio(1)
 
 MAX_VEL = 2500 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
-MAX_ANGLE = 15  # degrees of tilt for speed control
+MAX_ANGLE = 25  # degrees of tilt for speed control
 
 def constrain(val,minv,maxv):
     if val<minv:
@@ -45,7 +45,7 @@ def constrain(val,minv,maxv):
 
 # Complementary Filter A = rt/(rt + dt) where rt is response time, dt = period
 def compf(fangle,accel,gyro,looptime,A):
-    fangle = A * (fangle + gyro * looptime/1000000) + (1-A) * accel
+    fangle = A * (fangle + gyro * looptime/1000) + (1-A) * accel
     return fangle
 
 #speed P controiller - input is target speed, output is inclination angle
@@ -58,6 +58,7 @@ def speedcontrol(target,current):
 
 angle = 0.0
 rate = 0.0
+weight = 0.9
 gangle = 0.0
 controlspeed = 0
 fspeed = 0
@@ -67,30 +68,45 @@ motor1speed = 0
 motor2speed = 0
 #stability PD controiller - input is target angle, output is acceleration
 K = 6 # 7
-Kp = 50.0 # 4
-Kd = 1.1 # 0.4
+Kp = 5.0 # 4
+Kd = 1.5 # 0.4
+Ki = 0.5
+errorI = 0
 def stability(target,current,rate):
-    global K,Kp,Kd
+    global K,Kp,Kd,errorI
     error = target - current
-    output = Kp * error - Kd*rate
-    return int(K*output)
+    errorI = errorI + error
+    if errorI < -10 :
+        errorI = -9
+    if errorI > 10 :
+        errorI = 9 
+    output = Kp * error - Kd*rate #+ Ki*errorI
+    output = int(K*output)
+    if output < -2000 :
+        output = -1999
+    if output > 2000 :
+        output = 1999   
+    return output
 #main balance loop runs every 5ms
 def balance(self):
-    global motor1, motor2, imu, angle, rate, motor2speed
+    global motor1, motor2, imu, angle, rate, motor2speed, weight
     global gangle, controlspeed, fspeed, delta, tangle, motor1speed
-    start = ticks_us()
-    angle  = imu.pitch() - 2
-    rate   = imu.get_gy() + 28
-    gangle = compf(gangle, angle, rate, (ticks_us()-start), 0.99) 
-    if abs(gangle) < 45 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees
-        start = ticks_us()
+    start = time.ticks_ms()
+    angle  = imu.pitch() - 5
+    rate   = imu.get_gy() + 29
+    weight  = imu.weight()
+    gangle = weight * (gangle + rate * (time.ticks_ms()-start)/1000) + (1-weight) * angle
+    #gangle = 0.99 * (gangle + rate * (time.ticks_ms()-start)/1000) + (1-0.99) * angle
+
+    if abs(gangle) < 35 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees
+        start = time.ticks_ms()
         # speed control
         motor1speed = motor1.get_speed()
         motor2speed = motor2.get_speed()
         actualspeed = (motor1speed+motor2speed)/2
         fspeed = 0.95 * fspeed + 0.05 * actualspeed
         cmd = [0,0] #radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
-        tangle = speedcontrol(800*cmd[1],fspeed)
+        tangle = speedcontrol(100*cmd[1],fspeed)
         # stability control
         delta = stability(tangle, gangle, rate)
         controlspeed += delta         
@@ -115,8 +131,8 @@ while BOOT_sw.value() == 1 :
         balance(1)
         delay_start = time.ticks_ms()
 
-    if (time.ticks_ms()-print_start) > 100 :
-        #print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
+    if (time.ticks_ms()-print_start) > 200 :
+        print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'W', weight, 'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
         print_start = time.ticks_ms()
 
 print ('exit')

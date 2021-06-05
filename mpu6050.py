@@ -1,5 +1,6 @@
 import machine
 import os
+import math
 from struct import unpack as unp
 from math import atan2,degrees,pi
 from machine import I2C, Pin, Timer, sleep
@@ -174,12 +175,28 @@ class mpu6050():
     def pitch(self):
         scale = (16384, 8192, 4096, 2048)
         raw = self.get_accel_raw()
-        x = unp('>h', raw[0:2])[0]/8192
-        z = unp('>h', raw[4:6])[0]/8192
+        x = unp('>h', raw[0:2])[0]/2048
+        z = unp('>h', raw[4:6])[0]/2048
         pitch = degrees(pi+atan2(-x,-z)) - 180
         #if (pitch>=180) and (pitch<=360):
             #pitch-=360
         return -pitch
+
+    # get weight  
+    def weight(self):
+        scale = (16384, 8192, 4096, 2048)
+        raw = self.get_accel_raw()
+        x = unp('>h', raw[0:2])[0]/2048
+        y = unp('>h', raw[2:4])[0]/2048
+        z = unp('>h', raw[4:6])[0]/2048
+        mag = math.sqrt(x*x + y*y + z*z)
+        weight = math.fabs(1 - 5 * math.fabs(1-mag))        
+        weight /= 20
+        if weight < 0 :
+            weight = 0.1
+        if weight > 1 :
+            weight = 0.99          
+        return weight
 
     # get gyro pitch - y - axis in degrees
     def get_gy(self):
