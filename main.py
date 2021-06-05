@@ -69,7 +69,7 @@ motor2speed = 0
 #stability PD controiller - input is target angle, output is acceleration
 K = 6 # 7
 Kp = 5.0 # 4
-Kd = 1.5 # 0.4
+Kd = 0.9 # 0.4
 Ki = 0.5
 errorI = 0
 def stability(target,current,rate):
@@ -95,8 +95,8 @@ def balance(self):
     angle  = imu.pitch() - 5
     rate   = imu.get_gy() + 29
     weight  = imu.weight()
-    gangle = weight * (gangle + rate * (time.ticks_ms()-start)/1000) + (1-weight) * angle
-    #gangle = 0.99 * (gangle + rate * (time.ticks_ms()-start)/1000) + (1-0.99) * angle
+    #gangle = weight * (gangle + rate * (time.ticks_ms()-start)/1000) + (1-weight) * angle
+    gangle = 0.99 * (gangle + rate * (time.ticks_ms()-start)/1000) + (1-0.99) * angle
 
     if abs(gangle) < 35 and BOOT_sw.value() == 1:  # give up if inclination angle >=45 degrees
         start = time.ticks_ms()
