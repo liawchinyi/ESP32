@@ -29,16 +29,21 @@ pins = [machine.Pin(i, machine.Pin.IN) for i in (0, 2, 4, 5, 12, 13, 14, 15)]
 
 html = """<!DOCTYPE html>
 <html>
-    <head> <title>ESP32 Pins</title> </head>
-    <body> <h1>ESP32 Pins</h1>
+    <head> <title>ESP32 Status</title> </head>
+    <body> <h1>ESP32 Status</h1>
         <table border="1"> <tr><th>Pin</th><th>Value</th></tr> %s </table>
+    </body>
+</html>
+"""
+html_clr = """<!DOCTYPE html>
+<html>
+    <body> 
         <script type="text/javascript">
             document.body.innerHTML = '';
         </script>
     </body>
 </html>
 """
-
 # set up stepper motors
 from nemastepper import Stepper
 motor1 = Stepper(26,25,12) #nemastepper
@@ -91,7 +96,7 @@ motor1speed = 0
 motor2speed = 0
 #stability PD controiller - input is target angle, output is acceleration
 K = 6 # 7
-Kp = 5.0 # 4
+Kp = 15.0 # 4
 Kd = 0.9 # 0.4
 Ki = 0.5
 errorI = 0
@@ -99,16 +104,10 @@ def stability(target,current,rate):
     global K,Kp,Kd,errorI
     error = target - current
     errorI = errorI + error
-    if errorI < -10 :
-        errorI = -9
-    if errorI > 10 :
-        errorI = 9 
+
     output = Kp * error - Kd*rate #+ Ki*errorI
     output = int(K*output)
-    if output < -2000 :
-        output = -1999
-    if output > 2000 :
-        output = 1999   
+
     return output
 
 #main balance loop runs every 5ms
@@ -130,7 +129,7 @@ def balance(self):
         actualspeed = (motor1speed+motor2speed)/2
         fspeed = 0.95 * fspeed + 0.05 * actualspeed
         cmd = [0,0] #radio.poll() # cmd[0] is turn speed, cmd[1] is fwd/rev speed
-        tangle = speedcontrol(100*cmd[1],fspeed)
+        tangle = speedcontrol(800*cmd[1],fspeed)
         # stability control
         delta = stability(tangle, gangle, rate)
         controlspeed += delta         
@@ -148,10 +147,6 @@ def balance(self):
 delay_start = time.ticks_ms()
 print_start = time.ticks_ms()
 
-#initializing the timer
-#timer=Timer(8)
-#timer.init(freq=1, mode=Timer.PERIODIC, callback=web_update)   
-
 print ('start')
 
 cl, addr = s.accept()
@@ -160,21 +155,20 @@ cl_file = cl.makefile('rwb', 0)
 
 while BOOT_sw.value() == 1 :
 
-    if (time.ticks_ms()-delay_start) > 5 :
+    if (time.ticks_ms()-delay_start) > 4 :
         balance(1)
         delay_start = time.ticks_ms()
 
-    if (time.ticks_ms()-print_start) > 200 :
-        print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'W', weight, 'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed)
+    if (time.ticks_ms()-print_start) > 500 :
+        #print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'W', weight, 'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed)
         P = [0,1,2,3,4,5,6,7,8]
         A = ['Target Angle','G Angle','Angle','Rate','Weight','Delta','Motor1Speed','Motor2Speed','FS']
         B = [tangle,gangle,angle,rate,weight,delta,motor1speed,motor2speed,fspeed]
         rows = ['<tr><td>%s</td><td>%f</td></tr>' % (A[p], B[p]) for p in P]
         print_start = time.ticks_ms()
-   
-    response = html % '\n'.join(rows)
-    #cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-    #cl.send(response)
+        response = html % '\n'.join(rows)
+        cl.send(html_clr)
+        cl.send(response)
 
 cl.close()
 
@@ -184,4 +178,3 @@ motor1.set_speed(0)
 motor1.set_off()
 motor2.set_speed(0)
 motor2.set_off()
-led.deinit()
