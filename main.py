@@ -29,8 +29,8 @@ pins = [machine.Pin(i, machine.Pin.IN) for i in (0, 2, 4, 5, 12, 13, 14, 15)]
 
 html = """<!DOCTYPE html>
 <html>
-    <head> <title>ESP8266 Pins</title> </head>
-    <body> <h1>ESP8266 Pins</h1>
+    <head> <title>ESP32 Pins</title> </head>
+    <body> <h1>ESP32 Pins</h1>
         <table border="1"> <tr><th>Pin</th><th>Value</th></tr> %s </table>
         <script type="text/javascript">
             document.body.innerHTML = '';
@@ -165,10 +165,15 @@ while BOOT_sw.value() == 1 :
         delay_start = time.ticks_ms()
 
     if (time.ticks_ms()-print_start) > 200 :
-        print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'W', weight, 'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
+        print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'W', weight, 'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed)
+        P = [0,1,2,3,4,5,6,7,8]
+        A = ['Target Angle','G Angle','Angle','Rate','Weight','Delta','Motor1Speed','Motor2Speed','FS']
+        B = [tangle,gangle,angle,rate,weight,delta,motor1speed,motor2speed,fspeed]
+        rows = ['<tr><td>%s</td><td>%f</td></tr>' % (A[p], B[p]) for p in P]
         print_start = time.ticks_ms()
 
-    rows = ['<tr><td>%s</td><td>%d</td></tr>' % (str(p), p.value()) for p in pins]
+    #rows = ['<tr><td>%s</td><td>%d</td></tr>' % (str(p), p.value()) for p in pins]
+    
     response = html % '\n'.join(rows)
     cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
     cl.send(response)
