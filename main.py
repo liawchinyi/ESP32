@@ -160,7 +160,7 @@ cl_file = cl.makefile('rwb', 0)
 
 while BOOT_sw.value() == 1 :
 
-    if (time.ticks_ms()-delay_start) > 4 :
+    if (time.ticks_ms()-delay_start) > 5 :
         balance(1)
         delay_start = time.ticks_ms()
 
@@ -171,12 +171,10 @@ while BOOT_sw.value() == 1 :
         B = [tangle,gangle,angle,rate,weight,delta,motor1speed,motor2speed,fspeed]
         rows = ['<tr><td>%s</td><td>%f</td></tr>' % (A[p], B[p]) for p in P]
         print_start = time.ticks_ms()
-
-    #rows = ['<tr><td>%s</td><td>%d</td></tr>' % (str(p), p.value()) for p in pins]
-    
+   
     response = html % '\n'.join(rows)
-    cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
-    cl.send(response)
+    #cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+    #cl.send(response)
 
 cl.close()
 
