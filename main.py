@@ -5,32 +5,55 @@
 # C:\Python39\Lib\site-packages>esptool.py --port COM3 write_flash 0x1000 C:\ESP32a\esp32-idf3-20210202-v1.14.bin
 # Complete project details at https://RandomNerdTutorials.com
 # https://docs.micropython.org/en/latest/esp32/quickref.html
+# https://randomnerdtutorials.com/micropython-wi-fi-manager-esp32-esp8266/
 # http://micropython.org/webrepl/
+
+# Complete project details at https://RandomNerdTutorials.com
+import socket
 import sys
 import time
 from time import ticks_us, ticks_cpu, sleep, sleep_us, sleep_ms
 import machine
 from machine import I2C, Pin, Timer, sleep, PWM
+
 machine.freq(240000000)
+
+addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+s = socket.socket()
+s.bind(addr)
+s.listen(1)
+
+print('listening on', addr)
+
+pins = [machine.Pin(i, machine.Pin.IN) for i in (0, 2, 4, 5, 12, 13, 14, 15)]
+
+html = """<!DOCTYPE html>
+<html>
+    <head> <title>ESP8266 Pins</title> </head>
+    <body> <h1>ESP8266 Pins</h1>
+        <table border="1"> <tr><th>Pin</th><th>Value</th></tr> %s </table>
+        <script type="text/javascript">
+            document.body.innerHTML = '';
+        </script>
+    </body>
+</html>
+"""
+
 # set up stepper motors
 from nemastepper import Stepper
-motor1 = Stepper(26,25,12)#nemastepper
-motor2 = Stepper(33,32,14)#nemastepper
+motor1 = Stepper(26,25,12) #nemastepper
+motor2 = Stepper(33,32,14) #nemastepper
 
-led = PWM(Pin(19), freq=1, duty=512) # create and configure in one go
+led = Pin(19, Pin.OUT) #PWM(Pin(19), freq=1, duty=512) # create and configure in one go
 
 BOOT_sw = Pin(0, Pin.IN, Pin.PULL_UP) # 输入
 
 if BOOT_sw.value() == 0: # Press to terminate program
     print ('program terminated')
     sys.exit()
-    
+
 from mpu6050 import mpu6050
 imu = mpu6050()
-
-#set up wifi radio control
-#import wifiradio
-#radio = wifiradio.WiFiRadio(1)
 
 MAX_VEL = 2500 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
 MAX_ANGLE = 25  # degrees of tilt for speed control
@@ -87,6 +110,7 @@ def stability(target,current,rate):
     if output > 2000 :
         output = 1999   
     return output
+
 #main balance loop runs every 5ms
 def balance(self):
     global motor1, motor2, imu, angle, rate, motor2speed, weight
@@ -121,9 +145,18 @@ def balance(self):
         motor1.set_off()
         motor2.set_off()
 
-print ('start')
 delay_start = time.ticks_ms()
 print_start = time.ticks_ms()
+
+#initializing the timer
+#timer=Timer(8)
+#timer.init(freq=1, mode=Timer.PERIODIC, callback=web_update)   
+
+print ('start')
+
+cl, addr = s.accept()
+print('client connected from', addr)
+cl_file = cl.makefile('rwb', 0)
 
 while BOOT_sw.value() == 1 :
 
@@ -134,6 +167,13 @@ while BOOT_sw.value() == 1 :
     if (time.ticks_ms()-print_start) > 200 :
         print('TA',tangle,'GA',gangle,'A',angle,'R',rate,'W', weight, 'D',delta,'S1',motor1speed,'S2',motor2speed,'FS',fspeed,)
         print_start = time.ticks_ms()
+
+    rows = ['<tr><td>%s</td><td>%d</td></tr>' % (str(p), p.value()) for p in pins]
+    response = html % '\n'.join(rows)
+    cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+    cl.send(response)
+
+cl.close()
 
 print ('exit')
 
