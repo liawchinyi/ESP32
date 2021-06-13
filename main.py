@@ -60,7 +60,7 @@ if BOOT_sw.value() == 0: # Press to terminate program
 from mpu6050 import mpu6050
 imu = mpu6050()
 
-MAX_VEL = 2500 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
+MAX_VEL = 3000 # 2000 usteps/sec = 500steps/sec = 2.5rps = 150rpm
 MAX_ANGLE = 25  # degrees of tilt for speed control
 
 def constrain(val,minv,maxv):
@@ -95,8 +95,8 @@ tangle = 0
 motor1speed = 0
 motor2speed = 0
 #stability PD controiller - input is target angle, output is acceleration
-K = 6 # 7
-Kp = 15.0 # 4
+K = 7 # 7
+Kp = 4.0 # 4
 Kd = 0.9 # 0.4
 Ki = 0.5
 errorI = 0
@@ -149,9 +149,9 @@ print_start = time.ticks_ms()
 
 print ('start')
 
-cl, addr = s.accept()
+#cl, addr = s.accept()
 print('client connected from', addr)
-cl_file = cl.makefile('rwb', 0)
+#cl_file = cl.makefile('rwb', 0)
 
 while BOOT_sw.value() == 1 :
 
@@ -167,10 +167,10 @@ while BOOT_sw.value() == 1 :
         rows = ['<tr><td>%s</td><td>%f</td></tr>' % (A[p], B[p]) for p in P]
         print_start = time.ticks_ms()
         response = html % '\n'.join(rows)
-        cl.send(html_clr)
-        cl.send(response)
+        #cl.send(html_clr)
+        #cl.send(response)
 
-cl.close()
+#cl.close()
 
 print ('exit')
 
